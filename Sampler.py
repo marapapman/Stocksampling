@@ -7,6 +7,9 @@ import numpy as np
 import io
 import pickle
 import talib
+import pandas
+import math
+backtrace=-30
 def strTimeProp(start, end, format, prop):
     """Get a time at a proportion of a range of two formatted times.
 
@@ -41,51 +44,151 @@ def Download(list):
     for symbol in list:
         try:
             data = web.DataReader(symbol, 'google', start, end)
-            data.to_csv('./stockhist/'+symbol+'.h5')
+            data.to_pickle('./stockhist/'+symbol+'.pkl')
         except:
             pass
-
-FBdata=web.DataReader('FB', 'google', "06/07/2016", "06/19/2017")
-tencentdata=web.DataReader('TCEHY', 'google', "06/07/2016",  "06/19/2017")
-def GetNextDay(data, date):
+def GetNextDay(date, data):
+    nextday=date;
     for i in range(10):
-        nextday=date+datetime.timedelta(days=1)
+        nextday=nextday+datetime.timedelta(days=1)
         if nextday in data['Open']:
             return nextday
-def GenOneSample():
 
-    date=strTimeProp("1/1/2006","06/07/2017",'%m/%d/%Y',random.random())
+def GenOneSample(symbols,conn):
+    index = random.randint(0, len(symbols) - 1)
+    target = symbols[index]
+    date = strTimeProp("1/1/2007", "06/07/2017", '%m/%d/%Y', random.random())
     checkday = datetime.datetime.strptime(date, '%m/%d/%Y')
+    olddata = pandas.read_pickle("./stockhist/" + target + ".pkl")
+    olddata =(olddata-olddata.min())/(olddata.max()-olddata.min())
+    data = olddata[:checkday]
+    matrix=[]
+    #bollinger band area
+    upperband, middleband, lowerband = talib.BBANDS(data['Close'].values)
 
-    traning=[]
-    yesterday=checkday-datetime.timedelta(days=1)
-    if (tencentdata['Open'][checkday] > 1.01*tencentdata['Close'][yesterday]):
-        if FBdata['Close'][checkday] > FBdata['Open'][checkday]:
-            return 1
-        else:
-            return -1
-    if (tencentdata['Open'][checkday] < 0.99*tencentdata['Close'][yesterday]):
-        if FBdata['Close'][checkday] < FBdata['Open'][checkday]:
-            return 1;
-        else:
-            return -1
-    return 0
-    #print(data['Open'][date])
-#start = datetime.datetime(2010, 1, 1)
-#end = datetime.datetime(2013, 1, 27)
-#f = web.DataReader("F", 'google', start, end)
-#print(f)
-#conn = sqlite3.connect('Data.db')
-#conn.execute("CREATE TABLE IF NOT EXISTS Stockdata (tag INTEGER, data Blob);")
-#for i in range(10):
-#    try:
-#        print(GenOneSample())
-#        pass
-#for i in range(1000):
-#    try:
-#        GenOneSample(list,conn)
-#    except:
-#        pass
-#conn.close()
-upperband, middleband, lowerband = talib.BBANDS(FBdata['Close'].values)
-print(upperband)
+    matrix.append(upperband[backtrace:-1])
+    matrix.append(middleband[backtrace:-1])
+    matrix.append(lowerband[backtrace:-1])
+    #DEMA
+    matrix.append(talib.DEMA(data['Close'].values, timeperiod=21)[backtrace:-1])
+    #EMA
+    matrix.append(talib.EMA(data['Close'].values, timeperiod=21)[backtrace:-1])
+    #KAMA
+    matrix.append(talib.KAMA(data['Close'].values, timeperiod=21)[backtrace:-1])
+    #SMA
+    matrix.append(talib.SMA(data['Close'].values, timeperiod=21)[backtrace:-1])
+    #MAMA
+    mama, fama= talib.MAMA(data['Close'].values)
+    matrix.append(mama[backtrace:-1])
+    matrix.append(fama[backtrace:-1])
+    #TEMA
+    matrix.append(talib.TEMA(data['Close'].values, timeperiod=21)[backtrace:-1])
+    #TRIMA
+    matrix.append(talib.TRIMA(data['Close'].values, timeperiod=21)[backtrace:-1])
+    #ADX
+    matrix.append(talib.ADX(data['High'].values,data['Low'].values, data['Close'].values, timeperiod=21)[backtrace:-1])
+    #ADXR
+    matrix.append(talib.ADXR(data['High'].values,data['Low'].values, data['Close'].values, timeperiod=21)[backtrace:-1])
+    #APO
+    matrix.append(talib.APO(data['Close'].values)[backtrace:-1])
+    #BOP
+    matrix.append(talib.BOP(data['Open'].values,data['High'].values,data['Low'].values,data['Close'].values)[backtrace:-1])
+    #CCI
+    matrix.append(talib.CCI(data['High'].values,data['Low'].values,data['Close'].values)[backtrace:-1])
+    #CMO
+    matrix.append(talib.CMO(data['Close'].values)[backtrace:-1])
+    #DX
+    matrix.append(talib.DX(data['High'].values,data['Low'].values,data['Close'].values)[backtrace:-1])
+    #MACD
+    macd, macdsignal, macdhist = talib.MACD(data['Close'].values)
+    matrix.append(macd[backtrace:-1])
+    matrix.append(macdsignal[backtrace:-1])
+    matrix.append(macdhist[backtrace:-1])
+    #MFI
+    matrix.append(talib.MFI(data['High'].values,data['Low'].values,data['Close'].values,data['Volume'].values.astype(float))[backtrace:-1])
+    #MINUS_DI
+    matrix.append(talib.MINUS_DI(data['High'].values,data['Low'].values,data['Close'].values)[backtrace:-1])
+    #MINUS_DM
+    matrix.append(talib.MINUS_DM(data['High'].values,data['Low'].values)[backtrace:-1])
+    #MOM
+    matrix.append(talib.MOM(data['Close'].values)[backtrace:-1])
+    #PLUS_DI
+    matrix.append(talib.PLUS_DI(data['High'].values,data['Low'].values,data['Close'].values)[backtrace:-1])
+    #PLUS_DM
+    matrix.append(talib.PLUS_DM(data['High'].values,data['Low'].values)[backtrace:-1])
+    #PPO
+    matrix.append(talib.PPO(data['Close'].values)[backtrace:-1])
+    #ROCP
+    matrix.append(talib.ROCP(data['Close'].values)[backtrace:-1])
+    #ROC
+    matrix.append(talib.ROC(data['Close'].values)[backtrace:-1])
+    #ROCR
+    matrix.append(talib.ROCR(data['Close'].values)[backtrace:-1])
+    #RSI
+    matrix.append(talib.RSI(data['Close'].values)[backtrace:-1])
+    #STOCH
+    slowk, slowd = talib.STOCH(data['High'].values,data['Low'].values, data['Close'].values)
+
+    matrix.append(slowk[backtrace:-1])
+    matrix.append(slowd[backtrace:-1])
+    #STOCHF
+    fastk, fastd = talib.STOCHF(data['High'].values,data['Low'].values, data['Close'].values)
+    matrix.append(fastk[backtrace:-1])
+    matrix.append(fastd[backtrace:-1])
+    #WILLR
+    matrix.append(talib.WILLR(data['High'].values,data['Low'].values,data['Close'].values)[backtrace:-1])
+    #AD
+    matrix.append(talib.AD(data['High'].values,data['Low'].values,data['Close'].values,data['Volume'].values.astype(float))[backtrace:-1])
+    #ADOSC
+    matrix.append(talib.ADOSC(data['High'].values,data['Low'].values,data['Close'].values,data['Volume'].values.astype(float))[backtrace:-1])
+    #OBV
+    matrix.append(talib.OBV(data['Close'].values,data['Volume'].values.astype(float))[backtrace:-1])
+    #ATR
+    matrix.append(talib.ATR(data['High'].values,data['Low'].values,data['Close'].values)[backtrace:-1])
+    #TRANGE
+    matrix.append(talib.TRANGE(data['High'].values,data['Low'].values,data['Close'].values)[backtrace:-1])
+    #NATR
+    matrix.append(talib.NATR(data['High'].values,data['Low'].values,data['Close'].values)[backtrace:-1])
+
+    matrix=np.array(matrix)
+    if checkday not in olddata['Open']:
+        checkday=GetNextDay(checkday,olddata)
+    baseline=olddata['Open'][checkday]
+    tag=0
+    day=checkday
+    flag=True;
+    for i in range(5):
+        if olddata['High'][day]> 1.02*baseline:
+            tag=3
+            flag=False
+            break
+        if olddata['Low'][day]< 0.98*baseline:
+            tag=0
+            flag=False
+            break
+        day = GetNextDay(day, olddata)
+    if flag:
+        if olddata['Close'][day] > baseline:
+            tag=2
+        if olddata['Close'][day] < baseline:
+            tag=1
+    if not math.isnan(np.sum(matrix)):
+        print (np.sum(matrix))
+        blob=pickle.dumps(matrix)
+        conn.execute("INSERT INTO StockTable (tag, data) values (?,?)", (tag, blob))
+        conn.commit()
+
+#upperband, middleband, lowerband = talib.BBANDS(FBdata['Close'].values)
+#print(upperband)
+conn=sqlite3.connect("./Collected.db")
+conn.execute("CREATE TABLE IF NOT EXISTS StockTable (tag integer, data blob)")
+list=loadSymboles()
+GenOneSample(list, conn)
+
+#Download(list)
+for i in range(10):
+    try:
+        GenOneSample(list,conn)
+    except:
+        pass
+conn.close()

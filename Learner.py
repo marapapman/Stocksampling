@@ -1,11 +1,14 @@
 import pickle
 import sqlite3
+import numpy as np
 
 
-conn = sqlite3.connect('Data.db')
+conn = sqlite3.connect('Collected.db')
 cur = conn.cursor()
 
-cur.execute("select data from Stockdata")
+cur.execute("select data from StockTable")
 for row in cur:
-    print(pickle.loads(row[0]))
+    data=pickle.loads(row[0])
+    matrix=np.array(data)
+    print(np.sum(matrix))
 
