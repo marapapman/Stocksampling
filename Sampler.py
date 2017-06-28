@@ -186,7 +186,7 @@ list=loadSymboles()
 GenOneSample(list, conn)
 
 #Download(list)
-for i in range(10):
+for i in range(100):
     try:
         GenOneSample(list,conn)
     except:
